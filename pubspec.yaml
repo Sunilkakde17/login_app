@@ -5,6 +5,10 @@ description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
+#the following defines the target platform that this project will be built for.dependency_overrides:
+# Then it should be updated with the latest version from the fluuter studio package manager.dependency_overrides:
+# it should be updated with the latest version from the flutter studio package manager.dependency_overrides:
+#
 # A version number is three numbers separated by dots, like 1.2.43
 # followed by an optional build number separated by a +.
 # Both the version and the builder number may be overridden in flutter

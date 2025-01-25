@@ -1,15 +1,16 @@
 {
   "project_info": {
     "project_number": "121948004204",
+    "firebase_url": "https://loginapp-1048d-default-rtdb.firebaseio.com",
     "project_id": "loginapp-1048d",
     "storage_bucket": "loginapp-1048d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:121948004204:android:b20abd18603140d8b85d49",
+        "mobilesdk_app_id": "1:121948004204:android:c268e8dd39d5d3e2b85d49",
         "android_client_info": {
-          "package_name": "com.example.login_registration_firebase"
+          "package_name": "com.example.login_app"
         }
       },
       "oauth_client": [],

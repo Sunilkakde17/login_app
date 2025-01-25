@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+
+void _saveNumberToDatabase(String number) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final databaseRef = FirebaseDatabase.instance.ref(); // Updated reference method
+    await databaseRef.child('users/${user.uid}/numbers').push().set({
+      'number': number,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: FirebaseOptions(
-        apiKey: "AIzaSyAjdFuParCMcaYrHlcPBTKu6QJrtoBarNw",
-        authDomain: "loginapp-1048d.firebaseapp.com",
-        projectId: "loginapp-1048d",
-        storageBucket: "loginapp-1048d.firebasestorage.app",
-        messagingSenderId: "121948004204",
-        appId: "1:121948004204:web:d00cac0acbfe59f8b85d49",
-        measurementId: "G-GZVZ51LPDH"
+      apiKey: "AIzaSyAjdFuParCMcaYrHlcPBTKu6QJrtoBarNw",
+      authDomain: "loginapp-1048d.firebaseapp.com",
+      projectId: "loginapp-1048d",
+      storageBucket: "loginapp-1048d.appspot.com",
+      messagingSenderId: "121948004204",
+      appId: "1:121948004204:web:d00cac0acbfe59f8b85d49",
+      measurementId: "G-GZVZ51LPDH",
+      databaseURL: "https://loginapp-1048d-default-rtdb.firebaseio.com/", // Correct Database URL
     ),
   );
   runApp(MyApp());
@@ -27,7 +43,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 class AnimatedAuthScreen extends StatefulWidget {
   @override
   _AnimatedAuthScreenState createState() => _AnimatedAuthScreenState();
@@ -38,10 +53,10 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
   bool isLogin = true;
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
-  late Animation<Offset> _slideAnimation;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController(); // Add username controller
   final _auth = FirebaseAuth.instance;
 
   @override
@@ -55,13 +70,6 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
     _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-
-    _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: Offset(0, 0.5),
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
   }
 
   @override
@@ -69,18 +77,8 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
     _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _usernameController.dispose(); // Dispose username controller
     super.dispose();
-  }
-
-  void _toggleAuthMode() {
-    if (isLogin) {
-      _controller.forward();
-    } else {
-      _controller.reverse();
-    }
-    setState(() {
-      isLogin = !isLogin;
-    });
   }
 
   Future<void> _submit() async {
@@ -93,11 +91,19 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
         );
       } else {
         // Register logic
-        await _auth.createUserWithEmailAndPassword(
+        final userCredential = await _auth.createUserWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        // Save username to Firebase Realtime Database
+        final databaseRef = FirebaseDatabase.instance.ref();
+        await databaseRef.child('users/${userCredential.user!.uid}').set({
+          'username': _usernameController.text, // Save username
+          'email': _emailController.text,
+        });
       }
+
       // Redirect to HomePage after successful login/register
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (ctx) => HomePage()),
@@ -152,6 +158,16 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
                   ),
                 ),
                 SizedBox(height: 16),
+                if (!isLogin)
+                  TextField(
+                    controller: _usernameController, // Username input
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                SizedBox(height: 12),
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -171,36 +187,29 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
                   ),
                   obscureText: true,
                 ),
-                if (!isLogin)
-                  AnimatedOpacity(
-                    opacity: isLogin ? 0 : 1,
-                    duration: Duration(milliseconds: 300),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        prefixIcon: Icon(Icons.lock),
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                    ),
-                  ),
                 SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _submit,
                   style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent, // Set button background color to green
                     minimumSize: Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text(
+                child: Text(
                     isLogin ? 'Login' : 'Register',
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
                 TextButton(
-                  onPressed: _toggleAuthMode,
+                  onPressed: () {
+                    setState(() {
+                      isLogin = !isLogin;
+                    });
+                  },
                   child: Text(
+
                     isLogin
                         ? "Don't have an account? Register"
                         : "Already have an account? Login",
@@ -216,14 +225,23 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
 }
 
 class HomePage extends StatelessWidget {
+  final DatabaseReference _database = FirebaseDatabase.instance.reference();
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  void _storeNumber(String number) {
+    if (user != null) {
+      _database.child('users').child(user!.uid).push().set({'number': number});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home'),
+        title: Text('Calculator'),
         actions: [
           IconButton(
-            icon: Icon(Icons.exit_to_app),
+            icon: Text("Logout"),
             onPressed: () {
               FirebaseAuth.instance.signOut();
               Navigator.of(context).pushReplacement(
@@ -232,11 +250,42 @@ class HomePage extends StatelessWidget {
             },
           )
         ],
+        titleTextStyle: TextStyle(fontSize: 30),  // Use titleTextStyle instead of textStyle
       ),
+
       body: Center(
-        child: Text(
-          'Welcome to Home Page!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Press a number to store it:',
+              style: TextStyle(fontSize: 40),
+            ),
+            SizedBox(height: 5),
+            GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 4,
+                crossAxisSpacing: 5,
+                mainAxisSpacing: 5,
+              ),
+              itemCount: 12,
+              itemBuilder: (ctx, index) {
+                return ElevatedButton(
+                  onPressed: () => _storeNumber(index.toString()),
+                  style: ElevatedButton.styleFrom(
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(5),
+                  ),
+                  child: Text(
+                    index.toString(),
+                    style: TextStyle(fontSize: 30),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
